@@ -10,6 +10,7 @@
       <nav class="nav-links">
         <router-link to="/" class="nav-link" exact-active-class="active">首页</router-link>
         <router-link to="/" class="nav-link" active-class="active">全部商品</router-link>
+        <router-link to="/feed" class="nav-link" active-class="active">动态</router-link>
       </nav>
     </div>
 
@@ -17,6 +18,13 @@
       <template v-if="userStore.isLoggedIn">
         <router-link to="/publish" class="nav-btn">
           <el-button type="primary" round>发布商品</el-button>
+        </router-link>
+
+        <!-- 私信图标 -->
+        <router-link to="/messages" class="notif-bell">
+          <el-badge :value="unreadMsgCount" :max="99" :hidden="unreadMsgCount === 0">
+            <el-icon :size="22"><ChatDotRound /></el-icon>
+          </el-badge>
         </router-link>
 
         <!-- 通知铃铛 -->
@@ -70,7 +78,13 @@
               <el-dropdown-item @click="$router.push('/my/favorites')">
                 <el-icon><Star /></el-icon> 我的收藏
               </el-dropdown-item>
-              <el-dropdown-item divided @click="handleLogout">
+              <el-dropdown-item divided @click="$router.push(`/user/${userStore.userInfo?.id}`)">
+                <el-icon><User /></el-icon> 我的主页
+              </el-dropdown-item>
+              <el-dropdown-item @click="$router.push('/my/following')">
+                <el-icon><Connection /></el-icon> 我的关注
+              </el-dropdown-item>
+              <el-dropdown-item @click="handleLogout">
                 <el-icon><SwitchButton /></el-icon> 退出登录
               </el-dropdown-item>
             </el-dropdown-menu>
@@ -93,6 +107,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
 import { notificationApi } from '../api/notification'
+import { messageApi } from '../api/message'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -102,21 +117,35 @@ const unreadCount = ref(0)
 const notifications = ref([])
 let pollTimer = null
 
+// 私信
+const unreadMsgCount = ref(0)
+let msgPollTimer = null
+
 onMounted(() => {
   if (userStore.isLoggedIn) {
     fetchUnreadCount()
-    pollTimer = setInterval(fetchUnreadCount, 30000) // 30s 轮询
+    fetchMsgUnreadCount()
+    pollTimer = setInterval(fetchUnreadCount, 30000) // 30s 轮询通知
+    msgPollTimer = setInterval(fetchMsgUnreadCount, 15000) // 15s 轮询私信
   }
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  if (msgPollTimer) clearInterval(msgPollTimer)
 })
 
 async function fetchUnreadCount() {
   try {
     const data = await notificationApi.unreadCount()
     unreadCount.value = data.count
+  } catch (e) { /* ignore */ }
+}
+
+async function fetchMsgUnreadCount() {
+  try {
+    const data = await messageApi.unreadCount()
+    unreadMsgCount.value = data.count
   } catch (e) { /* ignore */ }
 }
 

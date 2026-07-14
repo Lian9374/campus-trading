@@ -28,20 +28,35 @@ public class ReportService {
     private final UserRepository userRepository;
 
     public void createReport(Long reporterId, ReportRequest request) {
-        if (!productRepository.existsById(request.getProductId())) {
-            throw new BusinessException("商品不存在");
-        }
-
-        // 同一用户对同一商品只能举报一次
-        if (reportRepository.existsByReporterIdAndProductId(reporterId, request.getProductId())) {
-            throw new BusinessException("您已举报过该商品");
-        }
-
         Report report = new Report();
         report.setReporterId(reporterId);
-        report.setProductId(request.getProductId());
         report.setReason(request.getReason());
         report.setDetail(request.getDetail());
+
+        if (request.getProductId() != null) {
+            // 举报商品
+            if (!productRepository.existsById(request.getProductId())) {
+                throw new BusinessException("商品不存在");
+            }
+            if (reportRepository.existsByReporterIdAndProductId(reporterId, request.getProductId())) {
+                throw new BusinessException("您已举报过该商品");
+            }
+            report.setProductId(request.getProductId());
+            report.setTargetType("PRODUCT");
+        } else if (request.getTargetUserId() != null) {
+            // 举报用户
+            if (reporterId.equals(request.getTargetUserId())) {
+                throw new BusinessException("不能举报自己");
+            }
+            if (!userRepository.existsById(request.getTargetUserId())) {
+                throw new BusinessException("用户不存在");
+            }
+            report.setTargetUserId(request.getTargetUserId());
+            report.setTargetType("USER");
+        } else {
+            throw new BusinessException("请指定举报对象");
+        }
+
         reportRepository.save(report);
     }
 
@@ -100,8 +115,10 @@ public class ReportService {
         ReportResponse resp = ReportResponse.fromEntity(report);
         userRepository.findById(report.getReporterId())
                 .ifPresent(u -> resp.setReporterName(u.getNickname()));
-        productRepository.findById(report.getProductId())
-                .ifPresent(p -> resp.setProductTitle(p.getTitle()));
+        if (report.getProductId() != null) {
+            productRepository.findById(report.getProductId())
+                    .ifPresent(p -> resp.setProductTitle(p.getTitle()));
+        }
         return resp;
     }
 }

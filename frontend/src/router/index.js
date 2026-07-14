@@ -53,6 +53,35 @@ const routes = [
     name: 'MyFavorites',
     component: () => import('../views/MyFavorites.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/messages',
+    name: 'Messages',
+    component: () => import('../views/Messages.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/:id',
+    name: 'UserProfile',
+    component: () => import('../views/UserProfile.vue')
+  },
+  {
+    path: '/my/following',
+    name: 'MyFollowings',
+    component: () => import('../views/MyFollowings.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/my/followers',
+    name: 'MyFollowers',
+    component: () => import('../views/MyFollowers.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/feed',
+    name: 'ActivityFeed',
+    component: () => import('../views/ActivityFeed.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

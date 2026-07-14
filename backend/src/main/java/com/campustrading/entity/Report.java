@@ -6,9 +6,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "reports", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"reporter_id", "product_id"})
-})
+@Table(name = "reports")
 public class Report {
 
     @Id
@@ -18,8 +16,14 @@ public class Report {
     @Column(name = "reporter_id", nullable = false)
     private Long reporterId;
 
-    @Column(name = "product_id", nullable = false)
-    private Long productId;
+    @Column(name = "product_id")
+    private Long productId; // nullable: 举报用户时为 null
+
+    @Column(name = "target_user_id")
+    private Long targetUserId; // 被举报的用户ID
+
+    @Column(name = "target_type", nullable = false, length = 20)
+    private String targetType = "PRODUCT"; // PRODUCT / USER
 
     @Column(nullable = false, length = 50)
     private String reason; // 虚假信息 / 违禁品 / 侵权 / 其他

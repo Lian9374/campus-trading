@@ -94,10 +94,10 @@
         <!-- 卖家卡片 -->
         <div class="seller-sidebar">
           <div class="seller-card">
-            <div class="seller-avatar">
+            <div class="seller-avatar" style="cursor: pointer" @click="$router.push(`/user/${product.sellerId}`)">
               <el-avatar :size="56">{{ (product.sellerName || '?')[0] }}</el-avatar>
             </div>
-            <h4 class="seller-name">{{ product.sellerName }}</h4>
+            <h4 class="seller-name" style="cursor: pointer" @click="$router.push(`/user/${product.sellerId}`)">{{ product.sellerName }}</h4>
             <div class="seller-rating" v-if="sellerRating > 0">
               <el-rate :model-value="sellerRating" disabled show-score :max="5" size="small" />
               <span class="rating-count">({{ sellerReviewCount }}条)</span>
@@ -108,6 +108,13 @@
             </div>
             <el-button plain size="small" class="seller-btn" @click="$router.push('/')">
               查看全部商品
+            </el-button>
+            <el-button
+              v-if="userStore.isLoggedIn && userStore.userInfo?.id !== product.sellerId"
+              type="primary" size="small" class="seller-btn" style="margin-top: 8px"
+              @click="$router.push(`/messages?productId=${product.id}&receiverId=${product.sellerId}`)"
+            >
+              <el-icon><ChatDotRound /></el-icon> 联系卖家
             </el-button>
           </div>
           <!-- 举报 -->
@@ -123,6 +130,72 @@
       <div class="detail-description">
         <h3>商品描述</h3>
         <div class="description-content">{{ product.description || '卖家很懒，没有写描述...' }}</div>
+      </div>
+
+      <!-- 商品问答 -->
+      <div class="detail-comments">
+        <h3>商品问答 <span class="comment-count">({{ commentTotal }})</span></h3>
+        <!-- 提问输入 -->
+        <div class="comment-input-box" v-if="userStore.isLoggedIn">
+          <el-input
+            v-model="commentText"
+            type="textarea"
+            :rows="2"
+            placeholder="对商品有任何疑问？在这里提问..."
+            maxlength="500"
+            show-word-limit
+          />
+          <el-button type="primary" size="small" :disabled="!commentText.trim()" :loading="commenting" @click="handleComment" style="margin-top: 8px">
+            发表提问
+          </el-button>
+        </div>
+        <div class="comment-list" v-if="comments.length > 0">
+          <div v-for="c in comments" :key="c.id" class="comment-item">
+            <div class="comment-meta">
+              <span class="comment-author">{{ c.userName }}</span>
+              <span class="comment-date">{{ c.createdAt?.slice(0, 10) }}</span>
+            </div>
+            <p class="comment-content">{{ c.content }}</p>
+            <!-- 回复 -->
+            <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
+              <div v-for="r in c.replies" :key="r.id" class="reply-item">
+                <span class="reply-author">{{ r.userName }}</span>：{{ r.content }}
+              </div>
+            </div>
+            <el-button
+              v-if="userStore.isLoggedIn && !c.replyVisible"
+              text size="small"
+              @click="c.replyVisible = true"
+              style="margin-top: 4px"
+            >
+              回复
+            </el-button>
+            <div v-if="c.replyVisible" class="reply-input-box" style="margin-top: 8px">
+              <el-input
+                v-model="c.replyText"
+                type="textarea"
+                :rows="1"
+                placeholder="写下回复..."
+                maxlength="300"
+              />
+              <div style="margin-top: 6px; display: flex; gap: 6px">
+                <el-button size="small" @click="c.replyVisible = false; c.replyText = ''">取消</el-button>
+                <el-button size="small" type="primary" :loading="c.replying" @click="handleReply(c)">回复</el-button>
+              </div>
+            </div>
+          </div>
+          <el-pagination
+            v-if="commentTotal > 10"
+            v-model:current-page="commentPage"
+            :page-size="10"
+            :total="commentTotal"
+            layout="prev, pager, next"
+            small background
+            class="comment-pagination"
+            @current-change="loadComments"
+          />
+        </div>
+        <el-empty v-else description="暂无问答" :image-size="48" />
       </div>
 
       <!-- 卖家评价 -->
@@ -189,6 +262,7 @@ import { orderApi } from '../api/order'
 import { favoriteApi } from '../api/favorite'
 import { reviewApi } from '../api/review'
 import { reportApi } from '../api/report'
+import { commentApi } from '../api/comment'
 
 const route = useRoute()
 const router = useRouter()
@@ -207,6 +281,13 @@ const reviews = ref([])
 const reviewTotal = ref(0)
 const sellerRating = ref(0)
 const sellerReviewCount = ref(0)
+
+// 问答
+const comments = ref([])
+const commentTotal = ref(0)
+const commentPage = ref(1)
+const commentText = ref('')
+const commenting = ref(false)
 
 // 举报
 const showReportDialog = ref(false)
@@ -236,6 +317,8 @@ onMounted(async () => {
       loadSellerReviews()
     }
 
+    loadComments()
+
     if (userStore.isLoggedIn) {
       try {
         const res = await favoriteApi.check(product.value.id)
@@ -261,6 +344,40 @@ async function loadSellerReviews() {
       sellerReviewCount.value = ratings.length
     }
   } catch (e) { /* ignore */ }
+}
+
+async function loadComments(page = 1) {
+  commentPage.value = page
+  try {
+    const data = await commentApi.list(product.value.id, { page: page - 1, size: 10 })
+    comments.value = data.content
+    commentTotal.value = data.totalElements
+  } catch (e) { /* ignore */ }
+}
+
+async function handleComment() {
+  if (!commentText.value.trim()) return
+  commenting.value = true
+  try {
+    await commentApi.create({ productId: product.value.id, content: commentText.value })
+    ElMessage.success('提问已发表')
+    commentText.value = ''
+    loadComments()
+  } catch (e) { /* handled */ }
+  finally { commenting.value = false }
+}
+
+async function handleReply(c) {
+  if (!c.replyText?.trim()) return
+  c.replying = true
+  try {
+    await commentApi.create({ productId: product.value.id, parentId: c.id, content: c.replyText })
+    ElMessage.success('回复成功')
+    c.replyVisible = false
+    c.replyText = ''
+    loadComments()
+  } catch (e) { /* handled */ }
+  finally { c.replying = false }
 }
 
 async function toggleFavorite() {
@@ -563,6 +680,88 @@ async function handleReport() {
 .report-box {
   margin-top: 10px;
   text-align: center;
+}
+
+/* === Comments === */
+.detail-comments {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.detail-comments h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.comment-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.comment-input-box {
+  margin-bottom: 20px;
+}
+
+.comment-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.comment-author {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.comment-date {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.comment-content {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.comment-replies {
+  margin-top: 8px;
+  padding-left: 16px;
+  border-left: 2px solid var(--color-primary-lighter);
+}
+
+.reply-item {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  padding: 4px 0;
+}
+
+.reply-author {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+.reply-input-box {
+  margin-top: 4px;
+}
+
+.comment-pagination {
+  justify-content: center;
+  margin-top: 16px;
 }
 
 @media (max-width: 1024px) {

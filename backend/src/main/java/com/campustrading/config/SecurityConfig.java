@@ -35,6 +35,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/user/profile/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/follow/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/activities/user/**").permitAll()
                 // 管理接口仅 ADMIN
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // 其余接口需要登录

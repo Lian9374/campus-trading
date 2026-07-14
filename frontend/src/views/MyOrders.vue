@@ -45,6 +45,13 @@
               >
                 确认收货
               </el-button>
+              <!-- 联系对方 -->
+              <el-button
+                size="small" plain
+                @click="$router.push(`/messages?productId=${order.productId}&receiverId=${order.buyerId === userStore.userInfo?.id ? order.sellerId : order.buyerId}`)"
+              >
+                <el-icon><ChatDotRound /></el-icon> 联系{{ order.buyerId === userStore.userInfo?.id ? '卖家' : '买家' }}
+              </el-button>
             </div>
           </div>
           <div class="order-footer">

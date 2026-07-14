@@ -1,16 +1,14 @@
 package com.campustrading.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 public class ReportRequest {
-    @NotNull(message = "商品ID不能为空")
-    private Long productId;
+    private Long productId;      // 举报商品时传此字段
 
-    @NotBlank(message = "举报原因不能为空")
-    private String reason;
+    private Long targetUserId;   // 举报用户时传此字段
 
-    private String detail;
+    private String reason;       // 举报原因
+
+    private String detail;       // 详细说明
 }

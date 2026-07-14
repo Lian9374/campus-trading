@@ -33,7 +33,7 @@
         <span v-if="product.originalPrice" class="original-price">{{ product.originalPrice }}</span>
       </div>
       <div class="meta">
-        <div class="seller-info">
+        <div class="seller-info" @click.stop="$router.push(`/user/${product.sellerId}`)">
           <span class="seller-avatar">{{ (product.sellerName || '?')[0] }}</span>
           <span class="seller">{{ product.sellerName }}</span>
         </div>

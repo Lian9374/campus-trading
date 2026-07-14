@@ -24,4 +24,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Page<Product> findByTitleContaining(String title, Pageable pageable);
 
     long countByStatus(Product.Status status);
+
+    long countBySellerIdAndStatus(Long sellerId, Product.Status status);
 }

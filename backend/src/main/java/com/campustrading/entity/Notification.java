@@ -38,7 +38,9 @@ public class Notification {
     public enum Type {
         ORDER,   // 订单相关通知
         REVIEW,  // 评价相关通知
-        SYSTEM   // 系统通知
+        SYSTEM,  // 系统通知
+        MESSAGE, // 私信通知
+        COMMENT  // 留言通知
     }
 
     @PrePersist
