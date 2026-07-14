@@ -10,6 +10,7 @@ import com.campustrading.entity.Notification;
 import com.campustrading.entity.Product;
 import com.campustrading.entity.User;
 import com.campustrading.repository.ConversationRepository;
+import com.campustrading.repository.FollowRepository;
 import com.campustrading.repository.MessageRepository;
 import com.campustrading.repository.ProductRepository;
 import com.campustrading.repository.UserRepository;
@@ -33,6 +34,7 @@ public class MessageService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final FollowRepository followRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
@@ -68,6 +70,21 @@ public class MessageService {
                     c.setProductId(product.getId());
                     return conversationRepository.save(c);
                 });
+
+        // 检查消息限制：单方面只能发3条，互相关注后才能无限聊天
+        long senderMsgCount = messageRepository
+                .findByConversationIdOrderByCreatedAtDesc(conversation.getId(), PageRequest.of(0, 1000))
+                .getContent().stream()
+                .filter(m -> m.getSenderId().equals(senderId))
+                .count();
+        if (senderMsgCount >= 3) {
+            Long receiverId = senderId.equals(buyerId) ? sellerId : buyerId;
+            boolean senderFollowsReceiver = followRepository.existsByFollowerIdAndFollowingId(senderId, receiverId);
+            boolean receiverFollowsSender = followRepository.existsByFollowerIdAndFollowingId(receiverId, senderId);
+            if (!(senderFollowsReceiver && receiverFollowsSender)) {
+                throw new BusinessException("已发送3条消息，需要互相关注后才能继续聊天。请先关注对方！");
+            }
+        }
 
         // 更新最后消息
         String preview = request.getContent().length() > 100

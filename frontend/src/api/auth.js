@@ -15,5 +15,8 @@ export const userApi = {
   },
   updateMe(data) {
     return request.put('/user/me', data)
+  },
+  searchUsers(keyword, params) {
+    return request.get('/user/search', { params: { keyword, ...params } })
   }
 }

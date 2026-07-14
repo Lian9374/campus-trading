@@ -29,6 +29,12 @@
             <el-icon><WarningFilled /></el-icon> 举报
           </el-button>
         </div>
+        <!-- 编辑资料（本人） -->
+        <div class="profile-actions" v-if="userStore.isLoggedIn && userStore.userInfo?.id == profile.id">
+          <el-button type="primary" size="small" @click="showEditDialog = true">
+            <el-icon><Edit /></el-icon> 编辑资料
+          </el-button>
+        </div>
       </div>
 
       <!-- 统计 -->
@@ -106,12 +112,44 @@
           <el-button type="danger" :loading="reporting" @click="handleReportUser">提交举报</el-button>
         </template>
       </el-dialog>
+
+      <!-- 编辑资料弹窗 -->
+      <el-dialog v-model="showEditDialog" title="编辑个人资料" width="440px">
+        <div class="edit-avatar-section">
+          <el-avatar :size="80" :src="editForm.avatar" class="edit-avatar">
+            {{ (editForm.nickname || '?')[0] }}
+          </el-avatar>
+          <el-upload
+            :show-file-list="false"
+            :before-upload="handleAvatarUpload"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            action="#"
+          >
+            <el-button size="small" type="primary" plain>更换头像</el-button>
+          </el-upload>
+        </div>
+        <el-form :model="editForm" label-width="70px" style="margin-top: 20px">
+          <el-form-item label="昵称">
+            <el-input v-model="editForm.nickname" placeholder="你的昵称" maxlength="50" />
+          </el-form-item>
+          <el-form-item label="校区">
+            <el-input v-model="editForm.campus" placeholder="如：仙林校区" maxlength="100" />
+          </el-form-item>
+          <el-form-item label="手机号">
+            <el-input v-model="editForm.phone" placeholder="选填" maxlength="20" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="showEditDialog = false">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="saveProfile">保存</el-button>
+        </template>
+      </el-dialog>
     </div>
   </Layout>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import Layout from '../components/Layout.vue'
@@ -134,6 +172,11 @@ const reviewPage = ref(1)
 const activeTab = ref('products')
 const isFollowing = ref(false)
 const followStats = ref({ followers: 0, following: 0 })
+
+// 编辑资料
+const showEditDialog = ref(false)
+const saving = ref(false)
+const editForm = ref({ nickname: '', campus: '', phone: '', avatar: '' })
 
 // 举报
 const showReportDialog = ref(false)
@@ -202,6 +245,48 @@ async function toggleFollow() {
       ElMessage.success('关注成功')
     }
   } catch (e) { /* handled */ }
+}
+
+// 编辑资料 — 弹出时初始化表单
+watch(showEditDialog, (val) => {
+  if (val && userStore.userInfo) {
+    editForm.value = {
+      nickname: userStore.userInfo.nickname || '',
+      campus: userStore.userInfo.campus || '',
+      phone: userStore.userInfo.phone || '',
+      avatar: userStore.userInfo.avatar || ''
+    }
+  }
+})
+
+async function handleAvatarUpload(file) {
+  try {
+    const url = await productApi.uploadImage(file)
+    editForm.value.avatar = url
+    ElMessage.success('头像上传成功')
+  } catch (e) { /* handled */ }
+  return false // 阻止默认上传行为
+}
+
+async function saveProfile() {
+  saving.value = true
+  try {
+    await userStore.updateUserInfo({
+      nickname: editForm.value.nickname,
+      campus: editForm.value.campus,
+      phone: editForm.value.phone,
+      avatar: editForm.value.avatar
+    })
+    // 更新本地 profile
+    if (profile.value) {
+      profile.value.nickname = editForm.value.nickname
+      profile.value.campus = editForm.value.campus
+      profile.value.avatar = editForm.value.avatar
+    }
+    ElMessage.success('资料已更新')
+    showEditDialog.value = false
+  } catch (e) { /* handled */ }
+  finally { saving.value = false }
 }
 
 async function handleReportUser() {
@@ -326,6 +411,18 @@ async function handleReportUser() {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+}
+
+.edit-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.edit-avatar {
+  box-shadow: 0 0 0 3px var(--color-primary-lighter);
 }
 
 @media (max-width: 768px) {
