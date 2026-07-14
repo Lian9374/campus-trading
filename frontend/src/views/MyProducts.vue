@@ -54,17 +54,19 @@ async function fetchProducts(page = 1) {
 .my-products-page {
   max-width: 1000px;
   margin: 0 auto;
+  padding: 24px 20px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .product-grid {
@@ -84,6 +86,7 @@ async function fetchProducts(page = 1) {
 .pagination {
   display: flex;
   justify-content: center;
-  margin-top: 32px;
+  margin-top: 36px;
+  padding-bottom: 32px;
 }
 </style>

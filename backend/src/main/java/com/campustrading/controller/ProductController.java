@@ -26,9 +26,11 @@ public class ProductController {
             @RequestParam(required = false) Integer categoryId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String campus,
+            @RequestParam(defaultValue = "newest") String sortBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
-        return Result.success(productService.listProducts(keyword, categoryId, minPrice, maxPrice, page, size));
+        return Result.success(productService.listProducts(keyword, categoryId, minPrice, maxPrice, campus, sortBy, page, size));
     }
 
     @GetMapping("/{id}")

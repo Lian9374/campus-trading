@@ -51,11 +51,13 @@ async function fetchFavorites(page = 1) {
 .my-favorites-page {
   max-width: 1000px;
   margin: 0 auto;
+  padding: 24px 20px;
 }
 
 .page-title {
-  font-size: 20px;
-  margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 24px;
 }
 
 .product-grid {
@@ -75,6 +77,7 @@ async function fetchFavorites(page = 1) {
 .pagination {
   display: flex;
   justify-content: center;
-  margin-top: 32px;
+  margin-top: 36px;
+  padding-bottom: 32px;
 }
 </style>

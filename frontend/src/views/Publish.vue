@@ -208,22 +208,25 @@ async function handleSubmit() {
 .publish-page {
   max-width: 720px;
   margin: 0 auto;
+  padding: 24px 20px;
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 22px;
+  font-weight: 700;
   margin-bottom: 20px;
 }
 
 .form-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 32px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 36px;
 }
 
 .unit {
   margin-left: 8px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .upload-area {
@@ -235,33 +238,34 @@ async function handleSubmit() {
 .cover-uploader {
   width: 160px;
   height: 160px;
-  border: 1px dashed #d9d9d9;
-  border-radius: 8px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-color 0.3s;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .cover-uploader:hover {
-  border-color: #409eff;
+  border-color: var(--color-primary);
+  background: rgba(16, 185, 129, 0.03);
 }
 
 .cover-uploader-icon {
   font-size: 28px;
-  color: #8c939d;
+  color: var(--color-text-muted);
 }
 
 .cover-preview {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .upload-tip {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 </style>

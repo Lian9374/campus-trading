@@ -31,9 +31,19 @@ public class User {
     @Column(length = 100)
     private String campus;
 
+    @Column(name = "rating_avg", precision = 3, scale = 2)
+    private java.math.BigDecimal ratingAvg = java.math.BigDecimal.ZERO;
+
+    @Column(name = "rating_count")
+    private Integer ratingCount = 0;
+
     @Column(length = 20)
     @Enumerated(EnumType.STRING)
     private Role role = Role.USER;
+
+    @Column(length = 20)
+    @Enumerated(EnumType.STRING)
+    private Status status = Status.ACTIVE;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -43,6 +53,10 @@ public class User {
 
     public enum Role {
         USER, ADMIN
+    }
+
+    public enum Status {
+        ACTIVE, BANNED
     }
 
     @PrePersist

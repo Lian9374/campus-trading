@@ -3,7 +3,7 @@
     <div class="my-orders-page">
       <h2 class="page-title">我的订单</h2>
 
-      <el-tabs v-model="activeTab" @tab-change="fetchOrders">
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <el-tab-pane label="全部" name="all" />
         <el-tab-pane label="我买到的" name="buyer" />
         <el-tab-pane label="我卖出的" name="seller" />
@@ -85,7 +85,13 @@ const total = ref(0)
 
 onMounted(() => fetchOrders())
 
+function onTabChange() {
+  fetchOrders(1)
+}
+
 async function fetchOrders(page = 1) {
+  // 防止 tab-change 传入 tab name 字符串
+  if (typeof page !== 'number') page = 1
   currentPage.value = page
   try {
     const data = await orderApi.myOrders({
@@ -137,32 +143,41 @@ async function handleComplete(order) {
 .my-orders-page {
   max-width: 800px;
   margin: 0 auto;
+  padding: 24px 20px;
 }
 
 .page-title {
-  font-size: 20px;
-  margin-bottom: 16px;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
 }
 
 .order-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  transition: box-shadow var(--transition-fast);
+}
+
+.order-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f5f5f5;
-  margin-bottom: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 14px;
 }
 
 .order-no {
-  font-size: 13px;
-  color: #999;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
 }
 
 .order-body {
@@ -173,39 +188,41 @@ async function handleComplete(order) {
 
 .order-product {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   cursor: pointer;
 }
 
 .product-img {
-  width: 64px;
-  height: 64px;
-  border-radius: 6px;
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
 }
 
 .product-info h4 {
-  font-size: 15px;
+  font-size: var(--text-base);
+  font-weight: 500;
   margin-bottom: 4px;
+  color: var(--color-text);
 }
 
 .amount {
-  color: #f56c6c;
-  font-size: 16px;
-  font-weight: 600;
+  color: var(--color-primary-dark);
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .order-footer {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
-  font-size: 13px;
-  color: #999;
+  margin-top: 14px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
 .pagination {
   display: flex;
   justify-content: center;
-  margin-top: 24px;
+  margin-top: 32px;
 }
 </style>
