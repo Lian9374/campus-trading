@@ -64,9 +64,14 @@ public class MessageService {
                 sellerId = request.getReceiverId();
             }
         } else {
-            // 无商品的直接私信：sender视为buyer, receiver视为seller
-            buyerId = senderId;
-            sellerId = request.getReceiverId();
+            // 无商品的直接私信：按ID大小归一化，保证双向查找一致
+            if (senderId < request.getReceiverId()) {
+                buyerId = senderId;
+                sellerId = request.getReceiverId();
+            } else {
+                buyerId = request.getReceiverId();
+                sellerId = senderId;
+            }
             productId = 0L; // 0表示非商品私信
         }
 
