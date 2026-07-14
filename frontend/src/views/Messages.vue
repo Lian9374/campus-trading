@@ -5,6 +5,9 @@
       <div class="conversation-panel" :class="{ hidden: activeConversationId && isMobile }">
         <div class="panel-header">
           <h3>私信</h3>
+          <el-button size="small" type="primary" plain @click="showNewMsgDialog = true">
+            <el-icon><Plus /></el-icon> 新私信
+          </el-button>
         </div>
         <div class="conversation-list" v-if="conversations.length > 0">
           <div
@@ -90,6 +93,36 @@
         </div>
       </div>
     </div>
+
+    <!-- 新私信弹窗 -->
+    <el-dialog v-model="showNewMsgDialog" title="发起新私信" width="460px" :before-close="() => showNewMsgDialog = false">
+      <el-input
+        v-model="newMsgKeyword"
+        placeholder="搜索用户昵称..."
+        size="large"
+        clearable
+        @input="searchUsersForMsg"
+      >
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
+      <div style="margin-top: 14px; max-height: 320px; overflow-y: auto">
+        <div v-for="u in newMsgUsers" :key="u.id" class="new-msg-user" @click="startChat(u)">
+          <el-avatar :size="40" :src="u.avatar">{{ (u.nickname || '?')[0] }}</el-avatar>
+          <div class="new-msg-body">
+            <span class="new-msg-name">{{ u.nickname }}</span>
+            <span class="new-msg-campus" v-if="u.campus">{{ u.campus }}</span>
+          </div>
+          <el-icon><ChatDotRound /></el-icon>
+        </div>
+        <el-empty v-if="newMsgKeyword && newMsgKeyword.length >= 2 && newMsgUsers.length === 0" description="未找到用户" :image-size="48" />
+        <div v-if="newMsgKeyword.length < 2" style="text-align: center; color: var(--color-text-muted); padding: 20px; font-size: var(--text-sm)">
+          输入至少2个字符搜索用户
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showNewMsgDialog = false">取消</el-button>
+      </template>
+    </el-dialog>
   </Layout>
 </template>
 
@@ -97,6 +130,7 @@
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useUserStore } from '../stores/user'
 import { messageApi } from '../api/message'
+import { userApi } from '../api/user'
 import Layout from '../components/Layout.vue'
 
 const userStore = useUserStore()
@@ -117,17 +151,30 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
   await fetchConversations()
 
-  // 检查 URL query 参数：从商品页跳转过来
+  // 检查 URL query 参数
   const query = new URLSearchParams(window.location.search)
   const productId = query.get('productId')
   const receiverId = query.get('receiverId')
-  if (productId && receiverId) {
-    // 找到已有会话或提示用户发送第一条消息
+
+  if (receiverId) {
+    // 从用户主页或商品页跳转过来，查找或创建会话
     const existing = conversations.value.find(
-      c => c.productId == productId && c.otherUserId == receiverId
+      c => c.otherUserId == receiverId && (productId ? c.productId == productId : c.productId === 0)
     )
     if (existing) {
       openConversation(existing)
+    } else {
+      // 自动发起新私信
+      try {
+        const payload = { receiverId: Number(receiverId), content: '你好！' }
+        if (productId) payload.productId = Number(productId)
+        await messageApi.send(payload)
+        await fetchConversations()
+        const conv = conversations.value.find(
+          c => c.otherUserId == receiverId && (productId ? c.productId == productId : c.productId === 0)
+        )
+        if (conv) openConversation(conv)
+      } catch (e) { /* ignore */ }
     }
   }
 
@@ -224,6 +271,57 @@ async function pollMessages() {
   } catch (e) { /* ignore */ }
 }
 
+// 新私信
+const showNewMsgDialog = ref(false)
+const newMsgKeyword = ref('')
+const newMsgUsers = ref([])
+let newMsgTimer = null
+
+function searchUsersForMsg() {
+  if (newMsgTimer) clearTimeout(newMsgTimer)
+  const kw = newMsgKeyword.value.trim()
+  if (kw.length < 2) { newMsgUsers.value = []; return }
+  newMsgTimer = setTimeout(async () => {
+    try {
+      const data = await userApi.discoverUsers(kw, { page: 0, size: 10 })
+      newMsgUsers.value = data.content
+    } catch (e) { newMsgUsers.value = [] }
+  }, 300)
+}
+
+async function startChat(u) {
+  showNewMsgDialog.value = false
+  newMsgKeyword.value = ''
+  newMsgUsers.value = []
+
+  // 检查是否已有与该用户的会话
+  const existing = conversations.value.find(
+    c => c.otherUserId === u.id && c.productId === 0
+  )
+  if (existing) {
+    openConversation(existing)
+    return
+  }
+
+  // 发第一条消息创建会话
+  try {
+    const data = await messageApi.send({
+      receiverId: u.id,
+      content: '你好！'
+    })
+    await fetchConversations()
+    // 打开新创建的会话
+    const conv = conversations.value.find(c => c.id === data.id)
+    if (conv) {
+      openConversation(conv)
+    } else if (data.id) {
+      activeConversationId.value = data.id
+      activeConversation.value = { ...data, otherUserId: u.id, otherUserName: u.nickname, otherUserAvatar: u.avatar }
+      messages.value = [{ id: Date.now(), conversationId: data.id, senderId: userStore.userInfo.id, senderName: userStore.userInfo.nickname, content: '你好！', isRead: false, createdAt: new Date().toISOString() }]
+    }
+  } catch (e) { /* handled */ }
+}
+
 function scrollToBottom() {
   if (msgListRef.value) {
     msgListRef.value.scrollTop = msgListRef.value.scrollHeight
@@ -269,6 +367,9 @@ function formatTime(dateStr) {
 .panel-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .panel-header h3 {
@@ -502,6 +603,38 @@ function formatTime(dateStr) {
 }
 
 /* === Mobile === */
+/* === New Message Dialog === */
+.new-msg-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.new-msg-user:hover {
+  background: var(--color-bg-alt);
+}
+
+.new-msg-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.new-msg-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.new-msg-campus {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
 @media (max-width: 768px) {
   .messages-page {
     height: calc(100vh - 64px);

@@ -45,29 +45,40 @@ public class MessageService {
             throw new BusinessException("不能给自己发消息");
         }
 
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new BusinessException("商品不存在"));
-
-        // 判断买卖双方身份
         Long buyerId, sellerId;
-        if (product.getSellerId().equals(senderId)) {
-            // 发送者是卖家
-            sellerId = senderId;
-            buyerId = request.getReceiverId();
+        Long productId;
+        String productTitle = "私信对话";
+
+        if (request.getProductId() != null) {
+            Product product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new BusinessException("商品不存在"));
+            productId = product.getId();
+            productTitle = product.getTitle();
+
+            // 判断买卖双方身份
+            if (product.getSellerId().equals(senderId)) {
+                sellerId = senderId;
+                buyerId = request.getReceiverId();
+            } else {
+                buyerId = senderId;
+                sellerId = request.getReceiverId();
+            }
         } else {
-            // 发送者是买家
+            // 无商品的直接私信：sender视为buyer, receiver视为seller
             buyerId = senderId;
             sellerId = request.getReceiverId();
+            productId = 0L; // 0表示非商品私信
         }
 
         // 查找或创建会话
+        Long finalProductId = productId;
         Conversation conversation = conversationRepository
-                .findByBuyerIdAndSellerIdAndProductId(buyerId, sellerId, product.getId())
+                .findByBuyerIdAndSellerIdAndProductId(buyerId, sellerId, finalProductId)
                 .orElseGet(() -> {
                     Conversation c = new Conversation();
                     c.setBuyerId(buyerId);
                     c.setSellerId(sellerId);
-                    c.setProductId(product.getId());
+                    c.setProductId(finalProductId);
                     return conversationRepository.save(c);
                 });
 
@@ -107,7 +118,7 @@ public class MessageService {
         notificationService.send(request.getReceiverId(),
                 Notification.Type.MESSAGE,
                 "新私信",
-                senderName + " 通过商品「" + product.getTitle() + "」给您发了一条消息",
+                senderName + " 给您发了一条私信" + (request.getProductId() != null ? "（关于「" + productTitle + "」）" : ""),
                 conversation.getId());
 
         return enrichConversation(conversation, senderId);
@@ -125,12 +136,14 @@ public class MessageService {
             return new PageImpl<>(List.of(), pageable, 0);
         }
 
-        // 批量加载商品信息
+        // 批量加载商品信息（排除 productId=0 的非商品私信）
         List<Long> productIds = conversations.stream()
                 .map(Conversation::getProductId)
+                .filter(id -> id != null && id > 0)
                 .distinct()
                 .collect(Collectors.toList());
-        Map<Long, Product> productMap = productRepository.findAllById(productIds).stream()
+        Map<Long, Product> productMap = productIds.isEmpty() ? Map.of()
+                : productRepository.findAllById(productIds).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
 
         // 批量加载"对方"用户信息
@@ -154,10 +167,14 @@ public class MessageService {
         List<ConversationResponse> list = conversations.stream().map(c -> {
             ConversationResponse r = ConversationResponse.fromEntity(c);
 
-            Product product = productMap.get(c.getProductId());
-            if (product != null) {
-                r.setProductTitle(product.getTitle());
-                r.setProductCover(product.getCoverImage());
+            if (c.getProductId() != null && c.getProductId() > 0) {
+                Product product = productMap.get(c.getProductId());
+                if (product != null) {
+                    r.setProductTitle(product.getTitle());
+                    r.setProductCover(product.getCoverImage());
+                }
+            } else {
+                r.setProductTitle("私信对话");
             }
 
             Long otherUserId = c.getBuyerId().equals(userId) ? c.getSellerId() : c.getBuyerId();
@@ -243,10 +260,14 @@ public class MessageService {
     private ConversationResponse enrichConversation(Conversation conversation, Long senderId) {
         ConversationResponse r = ConversationResponse.fromEntity(conversation);
 
-        Product product = productRepository.findById(conversation.getProductId()).orElse(null);
-        if (product != null) {
-            r.setProductTitle(product.getTitle());
-            r.setProductCover(product.getCoverImage());
+        if (conversation.getProductId() != null && conversation.getProductId() > 0) {
+            Product product = productRepository.findById(conversation.getProductId()).orElse(null);
+            if (product != null) {
+                r.setProductTitle(product.getTitle());
+                r.setProductCover(product.getCoverImage());
+            }
+        } else {
+            r.setProductTitle("私信对话");
         }
 
         // 对方 = 非发送者

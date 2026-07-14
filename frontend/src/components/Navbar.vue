@@ -9,42 +9,11 @@
       </router-link>
       <nav class="nav-links">
         <router-link to="/" class="nav-link" exact-active-class="active">首页</router-link>
-        <a class="nav-link" @click="showUserSearch = true">搜索用户</a>
+        <router-link to="/users" class="nav-link" active-class="active">发现用户</router-link>
         <router-link to="/feed" class="nav-link" active-class="active">动态</router-link>
       </nav>
     </div>
 
-    <!-- 搜索用户弹窗 -->
-    <el-dialog v-model="showUserSearch" title="搜索用户" width="500px" :before-close="() => showUserSearch = false">
-      <el-input
-        v-model="userSearchKeyword"
-        placeholder="输入昵称或用户名搜索..."
-        size="large"
-        clearable
-        @input="doUserSearch"
-        @clear="userSearchResults = []"
-      >
-        <template #prefix><el-icon><Search /></el-icon></template>
-      </el-input>
-      <div class="user-search-results" v-if="userSearchResults.length > 0" style="margin-top: 16px">
-        <div v-for="u in userSearchResults" :key="u.id" class="user-search-item" @click="goToUser(u)">
-          <el-avatar :size="40" :src="u.avatar">{{ (u.nickname || '?')[0] }}</el-avatar>
-          <div class="user-search-body">
-            <span class="user-search-name">{{ u.nickname }}</span>
-            <span class="user-search-campus" v-if="u.campus"><el-icon><Location /></el-icon>{{ u.campus }}</span>
-          </div>
-          <el-button
-            v-if="userStore.isLoggedIn && userStore.userInfo?.id !== u.id"
-            size="small"
-            :type="u.isFollowing ? 'default' : 'primary'"
-            @click.stop="quickFollow(u)"
-          >
-            {{ u.isFollowing ? '已关注' : '+ 关注' }}
-          </el-button>
-        </div>
-      </div>
-      <el-empty v-else-if="userSearchKeyword && userSearchKeyword.length >= 2" description="未找到用户" :image-size="48" />
-    </el-dialog>
 
     <div class="navbar-right">
       <template v-if="userStore.isLoggedIn">
@@ -230,57 +199,6 @@ function formatTime(dateStr) {
   return d.toLocaleDateString()
 }
 
-// 搜索用户
-const showUserSearch = ref(false)
-const userSearchKeyword = ref('')
-const userSearchResults = ref([])
-let userSearchTimer = null
-
-async function doUserSearch() {
-  if (userSearchTimer) clearTimeout(userSearchTimer)
-  const kw = userSearchKeyword.value.trim()
-  if (kw.length < 2) { userSearchResults.value = []; return }
-  userSearchTimer = setTimeout(async () => {
-    try {
-      const { userApi } = await import('../api/auth')
-      const data = await userApi.searchUsers(kw, { page: 0, size: 10 })
-      userSearchResults.value = data.content.map(u => ({ ...u, isFollowing: false }))
-      // 批量检查关注状态
-      if (userStore.isLoggedIn && userSearchResults.value.length > 0) {
-        const { followApi } = await import('../api/follow')
-        const results = await Promise.allSettled(
-          userSearchResults.value.map(u => followApi.check(u.id))
-        )
-        results.forEach((r, i) => {
-          if (r.status === 'fulfilled' && r.value?.following) {
-            userSearchResults.value[i].isFollowing = true
-          }
-        })
-      }
-    } catch (e) { userSearchResults.value = [] }
-  }, 300)
-}
-
-function goToUser(u) {
-  showUserSearch.value = false
-  router.push(`/user/${u.id}`)
-}
-
-async function quickFollow(u) {
-  try {
-    const { followApi } = await import('../api/follow')
-    if (u.isFollowing) {
-      await followApi.unfollow(u.id)
-      u.isFollowing = false
-      ElMessage.success('已取消关注')
-    } else {
-      await followApi.follow(u.id)
-      u.isFollowing = true
-      ElMessage.success('关注成功')
-    }
-  } catch (e) { /* handled */ }
-}
-
 function handleLogout() {
   userStore.logout()
   router.push('/login')
@@ -409,44 +327,6 @@ function handleLogout() {
   background: rgba(16, 185, 129, 0.06);
 }
 
-/* === User Search === */
-.nav-link {
-  cursor: pointer;
-}
-
-.user-search-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-}
-
-.user-search-item:hover {
-  background: var(--color-bg-alt);
-}
-
-.user-search-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-search-name {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.user-search-campus {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
 
 /* === Notification === */
 .notif-bell {

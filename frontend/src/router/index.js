@@ -82,6 +82,11 @@ const routes = [
     name: 'ActivityFeed',
     component: () => import('../views/ActivityFeed.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/users',
+    name: 'DiscoverUsers',
+    component: () => import('../views/DiscoverUsers.vue')
   }
 ]
 

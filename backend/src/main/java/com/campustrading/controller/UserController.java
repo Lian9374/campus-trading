@@ -43,6 +43,24 @@ public class UserController {
         return Result.success(userPage.map(UserInfo::fromEntity));
     }
 
+    @GetMapping("/discover")
+    public Result<Page<UserInfo>> discoverUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int p = Math.max(0, page);
+        int s = Math.min(50, Math.max(1, size));
+        Page<User> userPage;
+        if (keyword != null && !keyword.isBlank()) {
+            userPage = userRepository.searchByKeyword(keyword, PageRequest.of(p, s));
+        } else {
+            // 默认：按评分排序，展示活跃卖家
+            userPage = userRepository.findByStatusAndRatingCountGreaterThanOrderByRatingAvgDesc(
+                    com.campustrading.entity.User.Status.ACTIVE, 0, PageRequest.of(p, s));
+        }
+        return Result.success(userPage.map(UserInfo::fromEntity));
+    }
+
     @PutMapping("/me")
     public Result<UserInfo> updateCurrentUser(Authentication authentication,
                                                @RequestBody UpdateUserRequest request) {

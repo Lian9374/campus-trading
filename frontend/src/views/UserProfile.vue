@@ -25,6 +25,9 @@
           >
             {{ isFollowing ? '已关注' : '+ 关注' }}
           </el-button>
+          <el-button size="small" plain @click="goToChat">
+            <el-icon><ChatDotRound /></el-icon> 发私信
+          </el-button>
           <el-button text type="danger" size="small" @click="showReportDialog = true">
             <el-icon><WarningFilled /></el-icon> 举报
           </el-button>
@@ -287,6 +290,10 @@ async function saveProfile() {
     showEditDialog.value = false
   } catch (e) { /* handled */ }
   finally { saving.value = false }
+}
+
+function goToChat() {
+  router.push(`/messages?receiverId=${profile.value.id}`)
 }
 
 async function handleReportUser() {

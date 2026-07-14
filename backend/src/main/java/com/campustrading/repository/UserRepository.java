@@ -15,4 +15,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.nickname LIKE %:keyword% OR u.username LIKE %:keyword%")
     Page<User> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    Page<User> findByStatusAndRatingCountGreaterThanOrderByRatingAvgDesc(User.Status status, int ratingCount, Pageable pageable);
 }
