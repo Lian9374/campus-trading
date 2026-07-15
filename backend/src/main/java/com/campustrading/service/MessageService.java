@@ -51,19 +51,30 @@ public class MessageService {
         Long productId;
         String productTitle = "私信对话";
 
-        if (request.getProductId() != null) {
-            Product product = productRepository.findById(request.getProductId())
-                    .orElseThrow(() -> new BusinessException("商品不存在"));
-            productId = product.getId();
-            productTitle = product.getTitle();
+        if (request.getProductId() != null && request.getProductId() > 0) {
+            Product product = productRepository.findById(request.getProductId()).orElse(null);
+            if (product != null) {
+                productId = product.getId();
+                productTitle = product.getTitle();
 
-            // 判断买卖双方身份
-            if (product.getSellerId().equals(senderId)) {
-                sellerId = senderId;
-                buyerId = request.getReceiverId();
+                // 判断买卖双方身份
+                if (product.getSellerId().equals(senderId)) {
+                    sellerId = senderId;
+                    buyerId = request.getReceiverId();
+                } else {
+                    buyerId = senderId;
+                    sellerId = request.getReceiverId();
+                }
             } else {
-                buyerId = senderId;
-                sellerId = request.getReceiverId();
+                // 商品不存在，降级为非商品私信
+                if (senderId < request.getReceiverId()) {
+                    buyerId = senderId;
+                    sellerId = request.getReceiverId();
+                } else {
+                    buyerId = request.getReceiverId();
+                    sellerId = senderId;
+                }
+                productId = 0L;
             }
         } else {
             // 无商品的直接私信：按ID大小归一化，保证双向查找一致
