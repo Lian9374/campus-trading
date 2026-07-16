@@ -44,15 +44,33 @@
             <el-button v-if="isMobile" text @click="activeConversationId = null" class="back-btn">
               <el-icon><ArrowLeft /></el-icon>
             </el-button>
-            <div class="msg-header-info" @click="$router.push(`/product/${activeConversation.productId}`)">
+            <!-- 非商品私信：点击跳用户主页 -->
+            <div class="msg-header-info" v-if="!activeConversation.productId || activeConversation.productId === 0"
+                 @click="$router.push(`/user/${activeConversation.otherUserId}`)">
+              <el-avatar :size="40" :src="activeConversation.otherUserAvatar">
+                {{ (activeConversation.otherUserName || '?')[0] }}
+              </el-avatar>
+              <div>
+                <strong>{{ activeConversation.otherUserName }}</strong>
+                <span class="header-product-title">{{ activeConversation.productTitle }}</span>
+              </div>
+            </div>
+            <!-- 商品私信：点击跳商品页 -->
+            <div class="msg-header-info" v-else
+                 @click="$router.push(`/product/${activeConversation.productId}`)">
               <img :src="activeConversation.productCover || 'https://placehold.co/40x40/f5f7fa/999?text=N'" class="header-product-img" />
               <div>
                 <strong>{{ activeConversation.otherUserName }}</strong>
                 <span class="header-product-title">{{ activeConversation.productTitle }}</span>
               </div>
             </div>
-            <el-button size="small" @click="$router.push(`/product/${activeConversation.productId}`)">
+            <el-button v-if="activeConversation.productId && activeConversation.productId > 0"
+              size="small" @click="$router.push(`/product/${activeConversation.productId}`)">
               查看商品
+            </el-button>
+            <el-button v-else size="small"
+              @click="$router.push(`/user/${activeConversation.otherUserId}`)">
+              查看主页
             </el-button>
           </div>
 
