@@ -6,10 +6,11 @@ spring:
     active: local
 
   datasource:
-    url: jdbc:mysql://localhost:3306/campus_trading?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
-    username: root
+    # 本地默认 MySQL; Render 部署时设置 DB_URL 指向 PostgreSQL
+    url: ${DB_URL:jdbc:mysql://localhost:3306/campus_trading?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 不写死驱动, Spring 根据 JDBC URL 自动选择 (MySQL/PostgreSQL)
 
   jpa:
     hibernate:
@@ -18,11 +19,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    defer-datasource-initialization: true
-
-  sql:
-    init:
-      mode: always
 
   servlet:
     multipart:
