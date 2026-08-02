@@ -11,4 +11,5 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# MaxRAMPercentage: 让 JVM 使用容器内存的 75% (Render 免费层 512MB), 避免 OOM
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Xss512k", "-jar", "app.jar"]
