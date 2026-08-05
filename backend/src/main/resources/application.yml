@@ -6,8 +6,9 @@ spring:
     active: local
 
   datasource:
-    # 本地默认 MySQL; Render 部署时设置 DB_URL 指向 PostgreSQL
-    url: ${DB_URL:jdbc:mysql://localhost:3306/campus_trading?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true}
+    # Render Blueprint: DB_HOST/DB_PORT/DB_NAME 由 fromDatabase 自动注入 → 拼接 PostgreSQL
+    # 本地开发: application-local.yml 覆盖为 MySQL
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:campus_trading}?sslmode=require}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     # 不写死驱动, Spring 根据 JDBC URL 自动选择 (MySQL/PostgreSQL)

@@ -1,0 +1,58 @@
+# Render Blueprint — 校园二手交易平台一键部署
+# 关联 GitHub 仓库后, Render 自动创建: PostgreSQL + 后端 + 前端 三个资源
+# 免费额度: Web Service 750h/月(自动休眠), PostgreSQL 1GB(30天过期)
+
+services:
+  # ==================== 后端 (Spring Boot + Docker) ====================
+  - type: web
+    name: backend
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /api/categories
+    envVars:
+      # 数据库连接 — 从下方 PostgreSQL 自动注入 (Render 自动替换为实际值)
+      - key: DB_HOST
+        fromDatabase:
+          name: campus-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: campus-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: campus-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: campus-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: campus-db
+          property: password
+      # JWT 密钥 — 自动生成随机值
+      - key: JWT_SECRET
+        generateValue: true
+
+  # ==================== 前端 (Nginx + Docker) ====================
+  - type: web
+    name: frontend
+    runtime: docker
+    rootDir: frontend
+    plan: free
+    envVars:
+      # Nginx 代理目标 — 自动指向后端服务域名
+      - key: BACKEND_HOST
+        fromService:
+          name: backend
+          type: web
+          property: host
+
+# ==================== 数据库 (PostgreSQL) ====================
+databases:
+  - name: campus-db
+    plan: free
+    database: campus_trading
+    user: campus_trading
