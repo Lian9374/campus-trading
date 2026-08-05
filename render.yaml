@@ -54,5 +54,5 @@ services:
 databases:
   - name: campus-db
     plan: free
-    database: campus_trading
+    databaseName: campus_trading
     user: campus_trading
